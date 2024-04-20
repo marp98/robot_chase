@@ -23,4 +23,12 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
+add_executable(robot_chase src/robot_chase.cpp)
+ament_target_dependencies(robot_chase rclcpp tf2_ros geometry_msgs)
+
+install(TARGETS 
+  robot_chase
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()
