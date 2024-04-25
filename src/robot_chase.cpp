@@ -14,9 +14,9 @@ public:
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(get_clock());
         transform_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
         timer_ = create_wall_timer(100ms, std::bind(&RobotChaseNode::controlLoop, this));
-        kp_distance_ = 0.5;
-        kp_yaw_ = 1.0;
-        distance_threshold_ = 0.4;  
+        kp_distance_ = 0.8;
+        kp_yaw_ = 1.3;
+        distance_threshold_ = 0.5;  
     }
 
 private:
@@ -28,27 +28,31 @@ private:
     double kp_yaw_;
     double distance_threshold_;  
 
-    void controlLoop()
-    {
+    void controlLoop() {
         geometry_msgs::msg::TransformStamped transform;
-        try
-        {
+        try {
             transform = tf_buffer_->lookupTransform("rick/base_link", "morty/base_link", tf2::TimePointZero);
-        }
-        catch (const tf2::TransformException& ex)
-        {
+        } catch (const tf2::TransformException& ex) {
             RCLCPP_ERROR(get_logger(), "Could not get transform: %s", ex.what());
             return;
         }
 
-        double error_distance = sqrt(pow(transform.transform.translation.x, 2) + pow(transform.transform.translation.y, 2));
+        double dist = sqrt(pow(transform.transform.translation.x, 2) + pow(transform.transform.translation.y, 2));
         double error_yaw = atan2(transform.transform.translation.y, transform.transform.translation.x);
+
         double angular_velocity = kp_yaw_ * error_yaw;
         double linear_velocity = 0.0;
 
-        if (error_distance > distance_threshold_)
-        {
-            linear_velocity = kp_distance_ * error_distance;
+        RCLCPP_INFO(get_logger(), "Distance: %f", dist);  
+
+        if (dist > distance_threshold_) {
+            linear_velocity = kp_distance_ * dist * 1.02;
+        } else {
+            if (dist < 0.37) {
+                linear_velocity = 0.0; 
+            } else {
+                linear_velocity = 0.1 * dist;  
+            }
         }
 
         geometry_msgs::msg::Twist twist;
